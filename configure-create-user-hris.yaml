@@ -1,0 +1,49 @@
+---
+# biasa nya ini tidak perlu digunakan karena kita akan melakukan
+# create user menggunakan `cloud init` dari proxmox
+- name: Create a new Linux user with sudo privileges and authorized SSH keys
+  hosts: server
+  become: yes
+  vars:
+    new_username: "hris" # Nama pengguna baru
+    public_key_path: "/home/$USER/.ssh/id_rsa.pub" # Lokasi file kunci publik lokal
+
+  tasks:
+    - name: Create a new user
+      user:
+        name: "{{ new_username }}"
+        # ubah password_plaintext
+        # password: "{{ 'password_plaintext' | password_hash('sha512') }}"a
+        shell: /bin/bash
+        state: present
+        create_home: yes
+
+    - name: Add user to sudo group
+      user:
+        name: "{{ new_username }}"
+        groups: "sudo"
+        append: yes
+
+    - name: Create .ssh directory for the new user
+      file:
+        path: "/home/{{ new_username }}/.ssh"
+        state: directory
+        owner: "{{ new_username }}"
+        group: "{{ new_username }}"
+        mode: "0700"
+
+    - name: Copy authorized keys for the new user
+      copy:
+        src: "{{ public_key_path }}"
+        dest: "/home/{{ new_username }}/.ssh/authorized_keys"
+        owner: "{{ new_username }}"
+        group: "{{ new_username }}"
+        mode: "0600"
+
+    - name: Ensure sudo access without password for the new user
+      lineinfile:
+        path: /etc/sudoers
+        state: present
+        regexp: "^{{ new_username }} "
+        # line: "{{ new_username }} ALL=(ALL) NOPASSWD:ALL"
+        line: "{{ new_username }} ALL=(ALL) ALL"

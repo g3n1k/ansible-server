@@ -1,0 +1,44 @@
+---
+- name: Change SSH port to 3922
+  hosts: server
+  become: yes
+  become_method: sudo
+  become_user: root
+  tasks:
+    - name: Update SSH port to 3922
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?Port "
+        line: "Port 3922"
+        state: present
+
+    - name: Allow new SSH port in UFW
+      ufw:
+        rule: allow
+        port: "3922"
+        proto: tcp
+
+    - name: Disable the old SSH port (optional)
+      ufw:
+        rule: deny
+        port: "22"
+        proto: tcp
+
+    - name: Disable root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PermitRootLogin "
+        line: "PermitRootLogin no"
+        state: present
+
+    - name: Disable password login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "^#?PasswordAuthentication "
+        line: "PasswordAuthentication no"
+        state: present
+
+    - name: Reload SSH service to apply the new port
+      service:
+        name: ssh
+        state: reloaded

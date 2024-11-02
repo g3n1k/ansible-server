@@ -1,0 +1,60 @@
+---
+- name: Configure UFW to Allow Specific Ports Only from Whitelisted IPs
+  hosts: proxy
+  become: yes # Use sudo to execute the tasks with root privileges
+  vars:
+    allowed_ips:
+      # - "192.168.68.120" # Replace with your IPs
+      # - "your.ip.pub.lic" # ip vpn
+    allowed_ports:
+      - "1912" # new SSH port
+      - "8091" # other port for manage
+    allowed_ports_from_all:
+      - "80" # HTTP
+      - "443" # HTTPS
+      # - "1138" # mybe proxy
+
+  tasks:
+    - name: Ensure UFW is installed
+      apt:
+        name: ufw
+        state: present
+
+    - name: Allow specific ports from whitelisted IPs
+      ufw:
+        rule: allow
+        port: "{{ item.1 }}"
+        proto: tcp
+        from_ip: "{{ item.0 }}"
+      loop: "{{ allowed_ips | product(allowed_ports) | list }}"
+
+    # - name: Deny all other access to the specified ports
+    #   ufw:
+    #     rule: deny
+    #     port: "{{ item }}"
+    #     proto: tcp
+    #   loop: "{{ allowed_ports }}"
+
+    - name: Open multiple ports for all ip in UFW
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop: "{{ allowed_ports_from_all }}"
+
+    - name: Allow squid ports only from 10.10.10.0/24 IPs
+      ufw:
+        rule: allow
+        port: "3128"
+        proto: tcp
+        from_ip: "10.10.10.0/24"
+
+  #   - name: Enable UFW
+  #     command: ufw enable
+  #     # when: ansible_facts['ufw']['status'] != 'active'
+  #     notify:
+  #       - reload ufw
+
+  # handlers:
+  #   - name: reload ufw
+  #     command: ufw reload

@@ -1,0 +1,47 @@
+---
+- name: Install ClamAV Antivirus on Linux Server
+  hosts: server
+  become: yes
+  tasks:
+    - name: Update the package list
+      apt:
+        update_cache: yes
+
+    - name: Install ClamAV and ClamAV Daemon
+      apt:
+        name:
+          - clamav
+          - clamav-daemon
+        state: present
+
+    - name: Ensure ClamAV service is running and enabled
+      systemd:
+        name: clamav-freshclam
+        enabled: yes
+        state: started
+
+    - name: Stop freshclam service if running
+      service:
+        name: clamav-freshclam
+        state: stopped
+      ignore_errors: true
+
+    - name: Update ClamAV virus database
+      command: freshclam
+
+    - name: Run ClamAV scan on /home directory
+      command: clamscan -r /home
+      ignore_errors: yes
+
+    - name: Schedule daily virus database updates
+      cron:
+        name: "Daily ClamAV Database Update"
+        special_time: daily
+        job: "/usr/bin/freshclam"
+
+    - name: Schedule weekly full system scan
+      cron:
+        name: "Weekly Full System Scan"
+        special_time: weekly
+        job: "/usr/bin/clamscan -r /"
+      ignore_errors: yes

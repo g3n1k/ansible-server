@@ -1,0 +1,49 @@
+---
+- name: Install and configure Fail2ban
+  hosts: proxy # Ganti dengan grup host Anda
+  become: yes # Menggunakan sudo untuk instalasi
+  tasks:
+    - name: Install Fail2ban
+      apt:
+        name: fail2ban
+        state: present
+      when: ansible_os_family == "Debian" # Untuk sistem berbasis Debian
+
+    - name: Check if jail.local file exists
+      stat:
+        path: /etc/fail2ban/jail.local
+      register: jail_local_file
+
+    - name: Ensure jail.local file
+      copy:
+        dest: /etc/fail2ban/jail.local
+        content: ""
+        mode: "0644"
+        owner: root
+        group: root
+      when: not jail_local_file.stat.exists
+      notify: restart fail2ban
+
+    - name: Configure Fail2Ban for SSH with custom port
+      blockinfile:
+        path: /etc/fail2ban/jail.local
+        block: |
+          [sshd]
+          enabled = true
+          port = 22,3922
+          filter = sshd
+          logpath = /var/log/auth.log
+          maxretry = 5
+      notify: restart fail2ban
+
+    # - name: Start and enable Fail2ban service
+    #   service:
+    #     name: fail2ban
+    #     state: started
+    #     enabled: yes
+
+  handlers:
+    - name: restart fail2ban
+      service:
+        name: fail2ban
+        state: restarted

@@ -1,0 +1,20 @@
+---
+- name: Update and Upgrade Packages
+  hosts: server
+  become: yes # Use sudo to execute the tasks with root privileges
+  tasks:
+    - name: Update apt package list
+      apt:
+        update_cache: yes
+
+    - name: Upgrade all packages
+      apt:
+        upgrade: yes # Regular upgrade without dist-upgrade
+
+    - name: Auto-remove unnecessary packages
+      apt:
+        autoremove: yes
+
+    - name: Clean up package cache
+      apt:
+        autoclean: yes
